@@ -1,2 +1,11 @@
 # treeoftrust
-Java library to support the creation of a tree of trust in Java applications.
+This is similar to the OpenPGP web of trust but simplified for use in teams. A tree diagram, encoded in XML, is placed in a shared file store. The root of the tree references the public key of the person who created the diagram and sub nodes represent the keys of other members of the team. The public key in a node is signed with the private key owned by the person declared in the parent node. A node may indicate that the key owner is expected to edit the tree as well as take part in the team's work.  Nodes for keys belonging to people who are not allowed to edit the tree will, by necessity, be leaf nodes.
+It is expected that only designated tree editors will have write access to the file but in case someone has been given inappropriate access and finds it possible to tamper with the file there will be a mechanism for establishing its authenticity. The whole file must be signed using the private key of one of the team members who has been given tree edit rights.
+When a user reads the tree file a validation process takes place.
+1) The signatures on the signed public keys are checked. The whole tree must pass this test.  The file is rejected if this does not pass.
+2) The user checks the signature on the whole file matches the declared public key of one of the tree editors.  The file is rejected if this does not pass.
+3) The user checks a private list of validated public keys to ensure that they have personally validated the public key of the tree signer, or that they have personally validated the public key of the person who signed tree signer's public key, or onwards up the tree.  If none of the chain of validators has been validated by the user then the user must temporarily abandon use of the tree file and validate one of the public keys. 
+4) The personal validation would involve the user contacting the active member of the team highest in the tree. Identity would be verified and key fingerprint checked. The user would receive a copy of the public key, sign it with their own private key and store it in a key ring in their own file space.
+
+This Java library will be dependent on the Bouncy Castle Java library.
+This library will include some GUI components to help with the generation of key pairs, management of public/private keyrings in OpenPGP formats and viewing/editing the tree of trust itself.

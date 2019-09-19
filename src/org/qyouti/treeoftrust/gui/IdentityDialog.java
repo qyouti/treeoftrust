@@ -9,24 +9,16 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
-import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
-import org.bouncycastle.util.Arrays;
-import org.qyouti.compositefile.EncryptedCompositeFileUser;
 import org.qyouti.treeoftrust.CryptographyManager;
 
 
@@ -38,7 +30,7 @@ public class IdentityDialog
         extends javax.swing.JDialog
 {
   CryptographyManager cryptoman;
-  EncryptedCompositeFileUser user;
+
 
   private static final DateFormat df = new SimpleDateFormat( "HH:mm dd/MMM/yyyy" );
 

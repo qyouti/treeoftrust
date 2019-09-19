@@ -5,10 +5,7 @@
  */
 package org.qyouti.treeoftrust.gui;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JOptionPane;
-import org.qyouti.compositefile.EncryptedCompositeFileUser;
 import org.qyouti.treeoftrust.CryptographyManager;
 import org.qyouti.treeoftrust.CryptographyManagerException;
 
@@ -21,10 +18,11 @@ public class CreateIdentityDialog
         extends javax.swing.JDialog
 {
   CryptographyManager cryptoman;
-  EncryptedCompositeFileUser user;
   
   /**
    * Creates new form IdentityDialog
+   * @param parent
+   * @param cryptoman
    */
   public CreateIdentityDialog(java.awt.Frame parent, CryptographyManager cryptoman )
   {
@@ -40,7 +38,7 @@ public class CreateIdentityDialog
     updateFields();
   }
 
-  public void updateFields()
+  public final void updateFields()
   {
     passwordfield1.setEnabled( !usewindowscheckbox.isSelected() );
     if ( !passwordfield1.isEnabled() )

@@ -14,17 +14,12 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
-import java.security.InvalidKeyException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -72,13 +67,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
-import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.bouncycastle.util.Arrays;
-import org.qyouti.compositefile.EncryptedCompositeFile;
-import org.qyouti.compositefile.EncryptedCompositeFileUser;
 import org.qyouti.winselfcert.WindowsCertificateGenerator;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.CRYPT_USER_PROTECTED;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.MS_ENH_RSA_AES_PROV;
@@ -104,8 +93,7 @@ public class CryptographyManager
   String preferredkeyfingerprint;
   PGPSecretKey  preferredseckey;
   PGPPrivateKey  preferredprikey;
-  
-  EncryptedCompositeFileUser user;
+
           
   PGPSecretKeyRingCollection secringcoll;
   PGPPublicKeyRingCollection pubringcoll;
@@ -127,43 +115,7 @@ public class CryptographyManager
     Security.addProvider(new BouncyCastleProvider());
   }
   
-  /*
-  public void openSecretKey( byte[] fingerprint )
-  {
-    opensecretkey = -1;
-    user = null;
-
-    int i;
-    PGPSecretKey seckey;
-    PGPPublicKey pubkey;
-    String strfingerprinta = CryptographyManager.printFingerprint(fingerprint, "");
-    String strfingerprintb;
-    for ( i=0; i<secretkeys.size(); i++ )
-    {
-      seckey = secretkeys.get(i);
-      pubkey = seckey.getPublicKey();
-      strfingerprintb = CryptographyManager.printFingerprint(pubkey.getFingerprint(), "");
-      if ( strfingerprinta.equals( strfingerprintb ) )
-      {        
-        opensecretkey = i;
-        break;
-      }
-    }
-    
-    if ( i < secretkeys.size() )
-    {
-      opensecretkey = i;
-    }
-  }
-  
-  public PGPSecretKey getOpenSecretKey()
-  {
-    if ( opensecretkey < 0 || opensecretkey >= secretkeys.size() )
-      return null;
-    return secretkeys.get(opensecretkey);
-  }
-  */
-  
+   
   public static Date getSecretKeyCreationDate( PGPSecretKey seckey )
   {
     PGPPublicKey pubkey = seckey.getPublicKey();
@@ -250,35 +202,7 @@ public class CryptographyManager
   }
   
   
-  
-  public EncryptedCompositeFileUser getUser()
-  {
-    if ( user != null ) return user;
-    
-    if ( preferredseckey == null )
-      return null;
 
-    if ( preferredprikey == null )
-    {
-      char[] pw = getWindowsPassword( preferredseckey );
-      if ( pw == null )
-        pw = pwprov.getUserSuppliedPassword();
-      if ( pw == null ) return null;
-      try
-      {
-        preferredprikey = getPrivateKey(preferredseckey, pw);
-      }
-      catch (PGPException ex)
-      {
-        Logger.getLogger(CryptographyManager.class.getName()).log(Level.SEVERE, null, ex);
-        return null;
-      }
-    }
-    
-    PGPPublicKey pubkey = preferredseckey.getPublicKey();
-    user = new EncryptedCompositeFileUser( pubkey.getUserIDs().next(), preferredprikey, pubkey );
-    return user;
-  }
   
   public void init() throws CryptographyManagerException
   {
@@ -374,42 +298,11 @@ public class CryptographyManager
     return seckey.extractPrivateKey(dec);
   }
   
-  /*
-  public void unloadPrivateKey()
-  {
-    preferredprikey = null;
-    user = new EncryptedCompositeFileUser( useralias, null, preferredseckey.getPublicKey() );
-    password = null;
-  }
-  
-  public boolean loadPrivateKey()
-  {
-    preferredprikey = null;
-    if ( user == null || useralias == null )
-      return false;
-    
-    try
-    {
-      if ( password == null )
-        return false;
-      
-      preferredprikey = getPrivateKey(useralias, password );
-      user = new EncryptedCompositeFileUser( useralias, preferredprikey, preferredseckey.getPublicKey() );
-    }
-    catch (Exception ex)
-    {
-      Logger.getLogger(CryptographyManager.class.getName()).log(Level.SEVERE, null, ex);
-      preferredprikey = null;
-      return false;
-    }
-    return true;
-  }
-  */
+ 
   
   
   private void loadSecretKeys()
   {
-    user = null;
     preferredseckey = null;
     preferredprikey = null;
     secretkeys.clear();
@@ -430,7 +323,6 @@ public class CryptographyManager
       if ( fp.equals( preferredkeyfingerprint) )
       {
         preferredseckey = key;
-        loadUser();
       }
     }
   }
@@ -447,7 +339,6 @@ public class CryptographyManager
   
   public void setPreferredSecretKey( PGPSecretKey seckey )
   {
-    user = null;
     preferredseckey = seckey;
     preferredprikey = null;
     
@@ -456,33 +347,15 @@ public class CryptographyManager
     prefman.savePreferences();
   }
   
-  public boolean loadUser()
-  {
-    user = null;
-    try
-    {
-      user = new EncryptedCompositeFileUser( preferredseckey.getPublicKey().getUserIDs().next(), null, preferredseckey.getPublicKey() );
-    }
-    catch (Exception ex)
-    {
-      preferredseckey = null;
-      preferredprikey = null;
-      user = null;
-      Logger.getLogger(CryptographyManager.class.getName()).log(Level.SEVERE, null, ex);
-      return false;
-    }
-    
-    return true;
-  }
-  
-  
+
+
   public void createNewKeys( String alias, char[] password, boolean win ) throws CryptographyManagerException
   {
     if ( password == null || password.length == 0 )
     {
       try
       {
-        password = EncryptedCompositeFile.generateRandomPassphrase();
+        password = generateRandomPassphrase();
       }
       catch (NoSuchAlgorithmException ex)
       {
@@ -706,10 +579,10 @@ public class CryptographyManager
     ByteArrayOutputStream baout = new ByteArrayOutputStream();
     ArmoredOutputStream aout = new ArmoredOutputStream( baout );
     PGPSignatureGenerator signatureGenerator = new PGPSignatureGenerator( 
-                new BcPGPContentSignerBuilder( user.getPgppublickey().getAlgorithm(), HashAlgorithmTags.SHA256) );
-    signatureGenerator.init( PGPSignature.BINARY_DOCUMENT, user.getPgpprivatekey() );
+                new BcPGPContentSignerBuilder( preferredseckey.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA256) );
+    signatureGenerator.init( PGPSignature.BINARY_DOCUMENT, preferredprikey );
     PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-    spGen.setSignerUserID( false, user.getKeyalias() );
+    spGen.setSignerUserID( false, preferredseckey.getUserIDs().next() );
     signatureGenerator.setHashedSubpackets( spGen.generate() );
     signatureGenerator.update( plainText );
     PGPSignature signature = signatureGenerator.generate();
@@ -920,5 +793,18 @@ public class CryptographyManager
     
     return sb.toString();
   }
-    
+
+  
+  private static final String passchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ0123456789.,;:[]}{=+-_)(*&%$";
+
+  public static char[] generateRandomPassphrase() throws NoSuchAlgorithmException
+  {
+    SecureRandom sr = SecureRandom.getInstanceStrong();
+    char[] passphrase = new char[30];
+    for (int i = 0; i < passphrase.length; i++)
+    {
+      passphrase[i] = passchars.charAt(sr.nextInt(passchars.length()));
+    }
+    return passphrase;
+  }
 }

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -576,13 +577,19 @@ public class CryptographyManager
   public byte[] sign(byte[] plainText)
           throws Exception
   {
+    return CryptographyManager.sign( plainText, preferredprikey, preferredseckey.getPublicKey().getAlgorithm(), preferredseckey.getUserIDs().next() );
+  }
+  
+  public static byte[] sign(byte[] plainText, PGPPrivateKey prikey, int algo, String userid )
+          throws Exception
+  {
     ByteArrayOutputStream baout = new ByteArrayOutputStream();
     ArmoredOutputStream aout = new ArmoredOutputStream( baout );
     PGPSignatureGenerator signatureGenerator = new PGPSignatureGenerator( 
-                new BcPGPContentSignerBuilder( preferredseckey.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA256) );
-    signatureGenerator.init( PGPSignature.BINARY_DOCUMENT, preferredprikey );
+                new BcPGPContentSignerBuilder( algo, HashAlgorithmTags.SHA256) );
+    signatureGenerator.init( PGPSignature.BINARY_DOCUMENT, prikey );
     PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-    spGen.setSignerUserID( false, preferredseckey.getUserIDs().next() );
+    spGen.setSignerUserID( false, userid );
     signatureGenerator.setHashedSubpackets( spGen.generate() );
     signatureGenerator.update( plainText );
     PGPSignature signature = signatureGenerator.generate();
@@ -591,6 +598,32 @@ public class CryptographyManager
     return baout.toByteArray();
   }
 
+  public static PGPPublicKey signPublicKey( 
+          PGPPublicKey pubkey, 
+          PGPPrivateKey prikey, 
+          int algo, 
+          String userid,
+          Properties notations )
+          throws Exception
+  {
+    PGPSignatureGenerator signatureGenerator = new PGPSignatureGenerator( 
+                new BcPGPContentSignerBuilder( algo, HashAlgorithmTags.SHA256) );
+    signatureGenerator.init( PGPSignature.BINARY_DOCUMENT, prikey );
+    PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
+    spGen.setSignerUserID( false, userid );
+    if ( notations != null)
+    {
+      for ( Object objkey : notations.keySet() )
+        spGen.setNotationData( false, true, objkey.toString(), notations.getProperty( objkey.toString() ) );
+    }
+    signatureGenerator.setHashedSubpackets( spGen.generate() );
+    PGPSignature signature = signatureGenerator.generateCertification( pubkey );
+    
+    return PGPPublicKey.addCertification(pubkey, signature);
+  }
+
+  
+  
   /**
    * Verify an SHA256withRSA signature
    * @param plainText The message that was supposedly signed

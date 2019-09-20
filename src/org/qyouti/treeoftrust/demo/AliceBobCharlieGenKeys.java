@@ -30,6 +30,7 @@ import java.security.Security;
 import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Properties;
 import java.util.UUID;
 import javax.crypto.Cipher;
 
@@ -39,6 +40,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
+import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
@@ -52,6 +54,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.qyouti.treeoftrust.CryptographyManager;
+import org.qyouti.treeoftrust.TreeOfTrust;
 import org.qyouti.winselfcert.WindowsCertificateGenerator;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.CRYPT_USER_PROTECTED;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.MS_ENH_RSA_AES_PROV;
@@ -65,21 +68,24 @@ import static org.qyouti.winselfcert.WindowsCertificateGenerator.PROV_RSA_AES;
  */
 public class AliceBobCharlieGenKeys
 {
+  PGPPublicKeyRingCollection treeringcoll;
 
-  PGPSecretKeyRingCollection[] secringcoll = new PGPSecretKeyRingCollection[3];
-  PGPPublicKeyRingCollection[] pubringcoll = new PGPPublicKeyRingCollection[3];
+  final PGPSecretKeyRingCollection[] secringcoll = new PGPSecretKeyRingCollection[3];
+  final PGPPublicKeyRingCollection[] pubringcoll = new PGPPublicKeyRingCollection[3];
+  final PGPKeyPair[] keypair = new PGPKeyPair[3];
+  final PGPSecretKey[] seckey = new PGPSecretKey[3];
+  final PGPPrivateKey[] prikey = new PGPPrivateKey[3];
+  final PGPPublicKey[] pubkey = new PGPPublicKey[3];
   
-  String[] aliases = { "alice", "bob", "charlie" };
+  final String[] aliases = { "alice", "bob", "charlie" };
   
   private void createKeyRings() throws IOException, PGPException
   {
-    secringcoll[0] = new PGPSecretKeyRingCollection( new ArrayList<>() );
-    secringcoll[1] = new PGPSecretKeyRingCollection( new ArrayList<>() );
-    secringcoll[2] = new PGPSecretKeyRingCollection( new ArrayList<>() );
-    
-    pubringcoll[0] = new PGPPublicKeyRingCollection( new ArrayList<>() );
-    pubringcoll[1] = new PGPPublicKeyRingCollection( new ArrayList<>() );    
-    pubringcoll[2] = new PGPPublicKeyRingCollection( new ArrayList<>() );    
+    treeringcoll = new PGPPublicKeyRingCollection( new ArrayList<>() );
+    for ( int i=0; i<secringcoll.length; i++ )
+      secringcoll[i] = new PGPSecretKeyRingCollection( new ArrayList<>() );
+    for ( int i=0; i<pubringcoll.length; i++ )
+      pubringcoll[i] = new PGPPublicKeyRingCollection( new ArrayList<>() );
   }
   
   
@@ -100,6 +106,10 @@ public class AliceBobCharlieGenKeys
       pubringcoll[i].encode(out);
       out.close();
     }
+    out = new FileOutputStream("demo/treeoftrust_pubring.gpg");
+    treeringcoll.encode(out);
+    out.close();    
+    
   }
   
   
@@ -112,28 +122,29 @@ public class AliceBobCharlieGenKeys
   {
 
     PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
-    PGPKeyPair keyPair = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, pair, new Date());
-    PGPSecretKey secretKey = new PGPSecretKey(
+    keypair[secretOut] = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, pair, new Date());
+    prikey[secretOut] = keypair[secretOut].getPrivateKey();
+    seckey[secretOut] = new PGPSecretKey(
             PGPSignature.DEFAULT_CERTIFICATION,
-            keyPair,
+            keypair[secretOut],
             identity,
             sha1Calc,
             null,
             null,
             new JcaPGPContentSignerBuilder(
-                    keyPair.getPublicKey().getAlgorithm(),
+                    keypair[secretOut].getPublicKey().getAlgorithm(),
                     HashAlgorithmTags.SHA1),
             new JcePBESecretKeyEncryptorBuilder(
                     PGPEncryptedData.CAST5,
                     sha1Calc).setProvider("BC").build(passPhrase));
-    PGPPublicKey key = secretKey.getPublicKey();
+    pubkey[secretOut] = seckey[secretOut].getPublicKey();
 
     ArrayList<PGPSecretKey> seckeylist = new ArrayList<>();
-    seckeylist.add(secretKey);
+    seckeylist.add(seckey[secretOut]);
     PGPSecretKeyRing secretKeyRing = new PGPSecretKeyRing(seckeylist);
 
     ArrayList<PGPPublicKey> keylist = new ArrayList<>();
-    keylist.add(key);
+    keylist.add(pubkey[secretOut]);
     PGPPublicKeyRing keyring = new PGPPublicKeyRing(keylist);
     
     // add secret stuff to own
@@ -143,16 +154,20 @@ public class AliceBobCharlieGenKeys
       pubringcoll[i] = PGPPublicKeyRingCollection.addPublicKeyRing( pubringcoll[i], keyring );
   }
 
+  private void exportTreeKey( PGPPublicKey key )
+  {
+    ArrayList<PGPPublicKey> keylist = new ArrayList<>();
+    keylist.add(key);
+    PGPPublicKeyRing keyring = new PGPPublicKeyRing(keylist);
+    treeringcoll = PGPPublicKeyRingCollection.addPublicKeyRing( treeringcoll, keyring );    
+  }
+  
 
   private void run()
           throws Exception
   {
     Security.addProvider(new BouncyCastleProvider());
 
-    File demo = new File( "./demo" );
-    if ( !demo.exists() )
-      demo.mkdir();
-    
     char[] charliepassword = makeWindowsPasswordGuard();
     
     createKeyRings();
@@ -171,7 +186,25 @@ public class AliceBobCharlieGenKeys
       exportKeyPair( 2, charliekp, "charlie", charliepassword );
     }
     
+    Properties notations = new Properties();
+    notations.setProperty(TreeOfTrust.NOTATION_NAME_TREEOFTRUST, "true" );
+    
+    PGPPublicKey alicesignedbyalice = CryptographyManager.signPublicKey(
+            pubkey[0], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), notations );
+    PGPPublicKey bobsignedbyalice = CryptographyManager.signPublicKey(
+            pubkey[1], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), notations );
+    PGPPublicKey charliesignedbybob = CryptographyManager.signPublicKey(
+            pubkey[2], prikey[1], pubkey[1].getAlgorithm(), pubkey[1].getUserIDs().next(), notations );
+    
+    exportTreeKey( alicesignedbyalice );
+    exportTreeKey( bobsignedbyalice );
+    exportTreeKey( charliesignedbybob );
+    
     saveKeyRings();
+    
+    TreeOfTrust tot = new TreeOfTrust();
+    tot.setPublicKeyRingCollection(treeringcoll);
+    System.out.println( tot.toString() );
   }
 
   
@@ -199,11 +232,6 @@ public class AliceBobCharlieGenKeys
       {
         System.out.println("Failed to make certificate.");
         return null;
-      }
-      else
-      {
-        System.out.println("Serial number = " + serial.toString(16) );
-        System.out.println("As long = " + Long.toHexString( serial.longValue() ) );        
       }
 
       pubk = wcg.getPublickey();

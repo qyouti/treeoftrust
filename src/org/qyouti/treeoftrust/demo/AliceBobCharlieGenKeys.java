@@ -26,6 +26,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.security.SignatureException;
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.qyouti.treeoftrust.CryptographyManager;
 import org.qyouti.treeoftrust.TreeOfTrust;
+import org.qyouti.treeoftrust.TreeOfTrustStore;
 import org.qyouti.winselfcert.WindowsCertificateGenerator;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.CRYPT_USER_PROTECTED;
 import static org.qyouti.winselfcert.WindowsCertificateGenerator.MS_ENH_RSA_AES_PROV;
@@ -166,9 +168,14 @@ public class AliceBobCharlieGenKeys
   private void run()
           throws Exception
   {
+    long treeid = SecureRandom.getInstanceStrong().nextLong();
+    String treename = Long.toHexString( treeid );
+    
     Security.addProvider(new BouncyCastleProvider());
-
-    char[] charliepassword = makeWindowsPasswordGuard();
+    char[] charliepassword = null;
+    
+    if ( Security.getProvider("MSCAPI") != null )
+      charliepassword = makeWindowsPasswordGuard();
     
     createKeyRings();
     KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
@@ -186,23 +193,33 @@ public class AliceBobCharlieGenKeys
       exportKeyPair( 2, charliekp, "charlie", charliepassword );
     }
     
+    Properties rootnotations = new Properties();
+    Properties controlnotations = new Properties();
     Properties notations = new Properties();
-    notations.setProperty(TreeOfTrust.NOTATION_NAME_TREEOFTRUST, "true" );
     
-    PGPPublicKey alicesignedbyalice = CryptographyManager.signPublicKey(
-            pubkey[0], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), notations );
-    PGPPublicKey bobsignedbyalice = CryptographyManager.signPublicKey(
-            pubkey[1], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), notations );
-    PGPPublicKey charliesignedbybob = CryptographyManager.signPublicKey(
-            pubkey[2], prikey[1], pubkey[1].getAlgorithm(), pubkey[1].getUserIDs().next(), notations );
+    rootnotations.setProperty(    TreeOfTrustStore.NOTATION_NAME_TREENAME, treename );
+    rootnotations.setProperty(    TreeOfTrustStore.NOTATION_NAME_ROLE, TreeOfTrustStore.ROLE_CREATOR );
+    
+    controlnotations.setProperty(    TreeOfTrustStore.NOTATION_NAME_TREENAME, treename );
+    controlnotations.setProperty(    TreeOfTrustStore.NOTATION_NAME_ROLE, TreeOfTrustStore.ROLE_CONTROLLER );
+
+    notations.setProperty(    TreeOfTrustStore.NOTATION_NAME_TREENAME, treename );
+    notations.setProperty(    TreeOfTrustStore.NOTATION_NAME_ROLE, TreeOfTrustStore.ROLE_MEMBER );
+    
+    PGPPublicKey alicesignedbyalice = CryptographyManager.signPublicKey( pubkey[0], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), rootnotations );
+    PGPPublicKey bobsignedbyalice = CryptographyManager.signPublicKey( pubkey[1], prikey[0], pubkey[0].getAlgorithm(), pubkey[0].getUserIDs().next(), controlnotations );
+    PGPPublicKey charliesignedbybob=null;
+    if ( charliepassword != null )
+      charliesignedbybob = CryptographyManager.signPublicKey( pubkey[2], prikey[1], pubkey[1].getAlgorithm(), pubkey[1].getUserIDs().next(), notations );
     
     exportTreeKey( alicesignedbyalice );
     exportTreeKey( bobsignedbyalice );
-    exportTreeKey( charliesignedbybob );
+    if ( charliepassword != null )
+      exportTreeKey( charliesignedbybob );
     
     saveKeyRings();
     
-    TreeOfTrust tot = new TreeOfTrust();
+    TreeOfTrustStore tot = new TreeOfTrustStore();
     tot.setPublicKeyRingCollection(treeringcoll);
     System.out.println( tot.toString() );
   }

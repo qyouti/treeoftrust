@@ -16,11 +16,13 @@ import org.bouncycastle.openpgp.PGPSignature;
  */
 public class TreeOfTrustNode
 {
+  String treename;
   PGPPublicKeyRing publickeyring;
   PGPPublicKey publickey;
   PGPSignature signature;
   long id;
   long signerid;
+  String role;
   
   TestStatus supported          = TestStatus.DONTKNOW;
   TestStatus onekey             = TestStatus.DONTKNOW;

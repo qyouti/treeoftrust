@@ -6,6 +6,7 @@
 package org.qyouti.treeoftrust;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import org.bouncycastle.bcpg.sig.NotationData;
@@ -36,6 +37,10 @@ public class TreeOfTrustStore
     parseKeyRingCollection();
   }
   
+  public Collection<TreeOfTrust> getTrees()
+  {
+    return trees.values();
+  }
   
   private void parseSignature( PGPPublicKeyRing keyring, PGPPublicKey pubkey, PGPSignature sig, String treename )
   {
@@ -106,6 +111,9 @@ public class TreeOfTrustStore
       // only keyrings with one key get here - no sub-keys
       parseSignatures( keyring, pubkey );
     }
+    
+    for ( TreeOfTrust tree : trees.values() )
+      tree.reviewNodes();
     
     // one clear root?
 //    boolean foundroot = false;

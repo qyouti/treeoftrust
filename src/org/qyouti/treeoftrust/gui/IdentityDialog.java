@@ -117,8 +117,7 @@ public class IdentityDialog
     for ( int i=0; i<entries.size(); i++ )
     {
       Entry e = entries.get(i);
-      String epw = cryptoman.getEncryptedWindowsPassword( e.key );
-      SecretKeyPanel skpanel = new SecretKeyPanel( e.key, epw != null );
+      SecretKeyPanel skpanel = new SecretKeyPanel( e.key, cryptoman.hasWindowsPassword( e.key ) );
       tabbedpane.add( (e.creationdate==null)?"Unknown Date":df.format(e.creationdate), skpanel );
       if ( e.key == preferredseckey )
       {

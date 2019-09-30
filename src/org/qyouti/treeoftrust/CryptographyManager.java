@@ -82,16 +82,13 @@ public class CryptographyManager
 {
   private static final String WINDOWS_CERTIFICATE_ALIAS = "Qyouti Certificate for Protecting Private Keys";
 
-  PasswordProvider pwprov;
-  CryptographyManagerPreferenceManager prefman;
-  Preferences prefs;
+  CryptographyManagerConfiguration config;
 //  String useralias;
   char[] password;
   boolean windowsavailable=false;
   boolean usewindows;
   
   File pgpseckeyfile, pgppubkeyfile;
-  String preferredkeyfingerprint;
   PGPSecretKey  preferredseckey;
   PGPPrivateKey  preferredprikey;
 
@@ -104,16 +101,13 @@ public class CryptographyManager
   ArrayList<PGPSecretKey> secretkeys = new ArrayList<>();
   //int opensecretkey = -1;
   
-  public CryptographyManager( File base, CryptographyManagerPreferenceManager prefman, PasswordProvider pwprov )
+  public CryptographyManager( CryptographyManagerConfiguration prefman )
   {
     this.password = null;
-    this.prefman = prefman;
-    this.prefs = prefman.getPreferences();
-    this.pwprov = pwprov;
-    preferredkeyfingerprint = prefs.get("qyouti.crypto.preferredkey",null);
-    pgpseckeyfile = new File( base, "seckeyring.gpg" );
-    pgppubkeyfile = new File( base, "pubkeyring.gpg" );
-    Security.addProvider(new BouncyCastleProvider());
+    this.config = prefman;
+    pgpseckeyfile = new File( config.getSecretKeyRingFileName() );
+    pgppubkeyfile = new File( config.getPublicKeyRingFileName() );
+    Security.addProvider( new BouncyCastleProvider() );
   }
   
    
@@ -157,6 +151,7 @@ public class CryptographyManager
     return windowsavailable;
   }
 
+  /*
   private static String getEncryptedPasswordPreferenceKey( PGPPublicKey pubkey )
   {
     String fp = CryptographyManager.printFingerprint( pubkey.getFingerprint(), "_" );
@@ -166,7 +161,7 @@ public class CryptographyManager
   public String getEncryptedWindowsPassword( PGPSecretKey seckey )
   {
     PGPPublicKey pubkey = seckey.getPublicKey();
-    String str = prefs.get( getEncryptedPasswordPreferenceKey(pubkey), null );
+    String str = prefs.getProperty( getEncryptedPasswordPreferenceKey(pubkey) );
     if ( str == null || str.length() == 0 )
       return null;
     return str;
@@ -176,18 +171,25 @@ public class CryptographyManager
   {
     PGPPublicKey pubkey = seckey.getPublicKey();
     prefs.put( getEncryptedPasswordPreferenceKey(pubkey), encryptedpassword );
-    prefman.savePreferences();
+    config.saveProperties();
   }
   
   public void deleteEncryptedWindowsPassword( PGPSecretKey seckey )
   {
     prefs.remove( getEncryptedPasswordPreferenceKey(seckey.getPublicKey()) );
-    prefman.savePreferences();
+    config.saveProperties();
+  }
+  */
+  
+  public boolean hasWindowsPassword( PGPSecretKey seckey )
+  {
+    String encpass = config.getStoredEncryptedPassword( seckey.getKeyID() );
+    return encpass != null;
   }
   
   public char[] getWindowsPassword( PGPSecretKey seckey )
   {
-    String encpass = getEncryptedWindowsPassword( seckey );
+    String encpass = config.getStoredEncryptedPassword( seckey.getKeyID() );
     if ( encpass == null )
       return null;
     
@@ -202,9 +204,23 @@ public class CryptographyManager
     return null;
   }
   
-  
+  public PGPPublicKeyRingCollection loadPublicKeyRingCollection( String filename )
+  {
+    PGPPublicKeyRingCollection coll;
+    try
+    {
+      FileInputStream fin = new FileInputStream( filename );
+      coll = new PGPPublicKeyRingCollection( fin, fpcalc );
+      fin.close();
+      return coll;
+    }
+    catch ( Exception e )
+    {
+      e.printStackTrace();
+    }
+    return null;
+  }
 
-  
   public void init() throws CryptographyManagerException
   {
     FileInputStream fin;
@@ -319,12 +335,8 @@ public class CryptographyManager
       // only load the master key
       key = ring.getSecretKey();
       this.secretkeys.add( key );
-      pubkey = key.getPublicKey();
-      fp = CryptographyManager.printFingerprint( pubkey.getFingerprint(), "_" );
-      if ( fp.equals( preferredkeyfingerprint) )
-      {
+      if ( key.getKeyID() == config.getPreferredKeyID() )
         preferredseckey = key;
-      }
     }
   }
 
@@ -337,17 +349,14 @@ public class CryptographyManager
   {
     return preferredseckey;
   }
-  
+
+
   public void setPreferredSecretKey( PGPSecretKey seckey )
   {
     preferredseckey = seckey;
     preferredprikey = null;
-    
-    preferredkeyfingerprint = CryptographyManager.printFingerprint( preferredseckey.getPublicKey().getFingerprint(), "_" );
-    prefs.put("qyouti.crypto.preferredkey", preferredkeyfingerprint);
-    prefman.savePreferences();
+    config.setPreferredKeyID( seckey.getKeyID() );
   }
-  
 
 
   public void createNewKeys( String alias, char[] password, boolean win ) throws CryptographyManagerException
@@ -375,7 +384,7 @@ public class CryptographyManager
     if ( seckey != null )
     {
       if ( encryptedpassword != null )
-        setEncryptedWindowsPassword(seckey, encryptedpassword);
+        config.setStoredEncryptedPassword(seckey.getKeyID(), encryptedpassword);
       loadSecretKeys();
     }
   }
@@ -401,8 +410,8 @@ public class CryptographyManager
       secringcoll = PGPSecretKeyRingCollection.removeSecretKeyRing( secringcoll, secretkeyring );
       pubringcoll = PGPPublicKeyRingCollection.removePublicKeyRing( pubringcoll, publickeyring );
       saveKeyRingCollections();
-      
-      deleteEncryptedWindowsPassword(seckey);
+
+      config.deleteStoredEncryptedPassword( seckey.getKeyID() );
       loadSecretKeys();
       return true;
     }

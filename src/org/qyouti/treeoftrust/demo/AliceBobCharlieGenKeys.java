@@ -154,6 +154,11 @@ public class AliceBobCharlieGenKeys
     // add public to all
     for ( int i=0; i<pubringcoll.length; i++ )
       pubringcoll[i] = PGPPublicKeyRingCollection.addPublicKeyRing( pubringcoll[i], keyring );
+    
+    Properties p = new Properties();
+    FileOutputStream out = new FileOutputStream( "demo/bob_prefs.xml" );
+    p.storeToXML(out, "Demo");
+    out.close();
   }
 
   private void exportTreeKey( PGPPublicKey key )

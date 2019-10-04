@@ -1,0 +1,75 @@
+
+
+What does gpg do when it verifies signed data?
+
+
+release_list( CTX c )
+{
+.
+  proc_tree (CTX c, kbnode_t node)
+.
+}
+
+/*
+ * Process the tree which starts at node
+ */
+proc_tree (CTX c, kbnode_t node)
+{
+.
+  check_sig_and_print()
+.
+}
+
+
+check_sig_and_print()
+{
+.
+  do_check_sig()
+.
+.
+  check_signatures_trust()
+.
+}
+
+do_check_sig()
+{
+.
+  check_key_signature()
+.
+.
+  check_signature2()
+.
+}
+
+
+check_key_signature()
+{
+  check_key_signature2()
+}
+
+check_key_signature2()
+{
+.
+.
+.
+  check_signature_metadata_validity ()
+  check_signature_over_key_or_uid ()
+.
+.
+.
+.
+}
+
+
+check_signature_metadata_validity ()
+{
+  public key was created before the signature
+  public key created in the past
+  public key not expired
+  public key not revoked
+}
+
+check_signature_over_key_or_uid ()
+{
+  did the signer actually generate the signature?
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://github.com/qyouti/treeoftrust">
+  <treeoftrustid>
+    <id>1234</id>
+    <name>A Demo Tree Of Trust Project File</name>
+  </treeoftrustid>
+  <groups>
+    <group>
+      <id>g1</id>
+      <name>Examination Administrators</name>
+      <members>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+      </members>
+    </group>
+    <group>
+      <id>g1</id>
+      <name>Examiners</name>
+      <members>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+        <member>
+          <keyid></keyid>
+          <uid></uid>
+        </member>
+      </members>
+    </group>
+  </groups>
+  <files>
+    <file>
+      <canonicalpath></canonicalpath>
+      <accesscontrollist>
+        <aclitem>
+          <groupid></groupid>
+          <permissions>
+            <read/>
+            <write/>
+          </permissions>
+        </aclitem>
+      </accesscontrollist>
+    </file>
+  </files>
+</project>
+<!-- 
+This whole file must be digitally signed with a key trusted by all the team
+members - one that is in their own personal public key rings and signed
+-->

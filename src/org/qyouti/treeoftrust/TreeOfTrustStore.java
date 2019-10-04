@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import org.bouncycastle.bcpg.sig.NotationData;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
@@ -29,6 +30,7 @@ public class TreeOfTrustStore
   
   PGPPublicKeyRingCollection keyringcollection;
   final HashMap<String,TreeOfTrust> trees = new HashMap<>();
+  final ArrayList<TreeOfTrust> treesinorder = new ArrayList<>();
   
   public void setPublicKeyRingCollection( PGPPublicKeyRingCollection keyringcollection )
           throws TreeOfTrustException
@@ -37,9 +39,14 @@ public class TreeOfTrustStore
     parseKeyRingCollection();
   }
   
-  public Collection<TreeOfTrust> getTrees()
+  public List<TreeOfTrust> getTrees()
   {
-    return trees.values();
+    return treesinorder;
+  }
+
+  public TreeOfTrust getTree( String name )
+  {
+    return trees.get(name);
   }
   
   private void parseSignature( PGPPublicKeyRing keyring, PGPPublicKey pubkey, PGPSignature sig, String treename )
@@ -65,6 +72,7 @@ public class TreeOfTrustStore
     {
       tree = new TreeOfTrust( this, treename );
       trees.put(treename, tree);
+      treesinorder.add(tree);
     }
     tree.addNode(node);
   }
@@ -112,7 +120,7 @@ public class TreeOfTrustStore
       parseSignatures( keyring, pubkey );
     }
     
-    for ( TreeOfTrust tree : trees.values() )
+    for ( TreeOfTrust tree : treesinorder )
       tree.reviewNodes();
     
     // one clear root?

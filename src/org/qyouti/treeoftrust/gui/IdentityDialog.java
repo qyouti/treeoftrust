@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.qyouti.treeoftrust.CryptographyManager;
+import org.qyouti.treeoftrust.SignatureVerificationResultSet;
 
 
 /**
@@ -59,7 +60,7 @@ public class IdentityDialog
   {
     Entry entry = new Entry();
     entry.key = key;
-    entry.creationdate = CryptographyManager.getSecretKeyCreationDate(key);
+    entry.creationdate = CryptographyManager.getKeyCreationDate(key);
     entries.add(entry);
   }
 
@@ -85,7 +86,7 @@ public class IdentityDialog
   private Entry getSelectedEntry()
   {
     Component c = tabbedpane.getSelectedComponent();
-    if ( c == null || !(c instanceof SecretKeyPanel) )
+    if ( c == null || !(c instanceof KeyPanel) )
       return null;
     return entries.get( tabbedpane.getSelectedIndex() );
   }
@@ -117,7 +118,7 @@ public class IdentityDialog
     for ( int i=0; i<entries.size(); i++ )
     {
       Entry e = entries.get(i);
-      SecretKeyPanel skpanel = new SecretKeyPanel( e.key, cryptoman.hasWindowsPassword( e.key ) );
+      KeyPanel skpanel = new KeyPanel( e.key, e.key.getPublicKey(), new SignatureVerificationResultSet(), cryptoman.hasWindowsPassword( e.key ) );
       tabbedpane.add( (e.creationdate==null)?"Unknown Date":df.format(e.creationdate), skpanel );
       if ( e.key == preferredseckey )
       {
@@ -271,7 +272,7 @@ public class IdentityDialog
   private void selectbuttonActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_selectbuttonActionPerformed
   {//GEN-HEADEREND:event_selectbuttonActionPerformed
     Component c = tabbedpane.getSelectedComponent();
-    if ( !(c instanceof SecretKeyPanel ) )
+    if ( !(c instanceof KeyPanel ) )
       return;
     
     PGPSecretKey seckey;

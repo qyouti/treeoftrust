@@ -9,21 +9,23 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import javax.swing.JScrollPane;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureSubpacketVector;
 import org.qyouti.treeoftrust.CryptographyManager;
+import org.qyouti.treeoftrust.SignatureVerificationResultSet;
 
 
 /**
  *
  * @author maber01
  */
-public class SecretKeyPanel
+public class KeyPanel
         extends javax.swing.JPanel
 {
-  PGPSecretKey key;
+  PGPSecretKey seckey;
   PGPPublicKey pubkey;
   boolean winprotect;
   
@@ -31,27 +33,47 @@ public class SecretKeyPanel
   
   /**
    * Creates new form SecretKeyPanel
+   * @param seckey
+   * @param pubkey
+   * @param signatureverificationresultset
+   * @param winprotect
    */
-  public SecretKeyPanel( PGPSecretKey key, boolean winprotect )
+  public KeyPanel( PGPSecretKey seckey, PGPPublicKey pubkey, SignatureVerificationResultSet signatureverificationresultset, boolean winprotect )
   {
-    this.key = key;
+    this.seckey = seckey;
+    this.pubkey = pubkey;
     this.winprotect = winprotect;
+    if ( pubkey == null && seckey != null )
+      pubkey = seckey.getPublicKey();
     
-    pubkey = key.getPublicKey();
     initComponents();
     namelabel.setText( pubkey.getUserIDs().next() );
     idlabel.setText( Long.toHexString( pubkey.getKeyID() ) );
     fingerprintlabel.setText( CryptographyManager.prettyPrintFingerprint( pubkey.getFingerprint() ) );
-    protectionlabel.setText( winprotect?"Protected by Windows Cryptography":"Protected by password which you must remember");
+    if ( seckey != null )
+      protectionlabel.setText( winprotect?"Protected by Windows Cryptography":"Protected by password which you must remember");
+    else
+      protectionlabel.setText( "Public key only - contains no secret data." );
     creationdatelabel.setText( "?" );
-    Date d = CryptographyManager.getSecretKeyCreationDate( key );
+    Date d = CryptographyManager.getKeyCreationDate( pubkey );
     if ( d != null )
       creationdatelabel.setText( df.format(d) );
+    
+    Iterator it = pubkey.getSignatures();
+    for ( int i=0; it.hasNext(); i++ )
+    {
+      PGPSignature sig = (PGPSignature)it.next();
+      sig.getKeyID();
+      JScrollPane sigscrollpane = new JScrollPane();
+      SignaturePanel sigpanel = new SignaturePanel( sig, signatureverificationresultset.getSignatureVerificationResultAt(i) );
+      sigscrollpane.setViewportView( sigpanel );
+      signaturetabbedpane.add( Long.toHexString( sig.getKeyID() ).toUpperCase(), sigscrollpane );
+    }
   }
 
   public PGPSecretKey getSecretKey()
   {
-    return key;
+    return seckey;
   }
 
   
@@ -76,8 +98,7 @@ public class SecretKeyPanel
     fingerprintlabel = new javax.swing.JLabel();
     protectionlabel = new javax.swing.JLabel();
     jLabel6 = new javax.swing.JLabel();
-    jScrollPane1 = new javax.swing.JScrollPane();
-    jList1 = new javax.swing.JList<>();
+    signaturetabbedpane = new javax.swing.JTabbedPane();
 
     setMinimumSize(new java.awt.Dimension(500, 300));
 
@@ -107,21 +128,13 @@ public class SecretKeyPanel
     protectionlabel.setText("...");
 
     jLabel6.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
-    jLabel6.setText("Public Key Signed By:");
-
-    jList1.setModel(new javax.swing.AbstractListModel<String>()
-    {
-      String[] strings = { "This list not yet functional." };
-      public int getSize() { return strings.length; }
-      public String getElementAt(int i) { return strings[i]; }
-    });
-    jScrollPane1.setViewportView(jList1);
+    jLabel6.setText("Certifications:");
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
     this.setLayout(layout);
     layout.setHorizontalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-      .addGroup(layout.createSequentialGroup()
+      .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
         .addContainerGap()
         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
           .addComponent(jLabel6)
@@ -132,13 +145,13 @@ public class SecretKeyPanel
           .addComponent(jLabel7))
         .addGap(18, 18, 18)
         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(namelabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+          .addComponent(namelabel, javax.swing.GroupLayout.DEFAULT_SIZE, 374, Short.MAX_VALUE)
           .addComponent(idlabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
           .addComponent(fingerprintlabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
           .addComponent(protectionlabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-          .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 351, Short.MAX_VALUE)
           .addComponent(creationdatelabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         .addContainerGap())
+      .addComponent(signaturetabbedpane)
     );
     layout.setVerticalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -164,10 +177,9 @@ public class SecretKeyPanel
           .addComponent(jLabel4)
           .addComponent(protectionlabel))
         .addGap(18, 18, 18)
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(jLabel6)
-          .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        .addComponent(jLabel6)
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addComponent(signaturetabbedpane, javax.swing.GroupLayout.DEFAULT_SIZE, 121, Short.MAX_VALUE))
     );
   }// </editor-fold>//GEN-END:initComponents
 
@@ -182,9 +194,8 @@ public class SecretKeyPanel
   private javax.swing.JLabel jLabel4;
   private javax.swing.JLabel jLabel6;
   private javax.swing.JLabel jLabel7;
-  private javax.swing.JList<String> jList1;
-  private javax.swing.JScrollPane jScrollPane1;
   private javax.swing.JLabel namelabel;
   private javax.swing.JLabel protectionlabel;
+  private javax.swing.JTabbedPane signaturetabbedpane;
   // End of variables declaration//GEN-END:variables
 }

@@ -95,6 +95,8 @@ public class CryptographyManager
           
   PGPSecretKeyRingCollection secringcoll;
   PGPPublicKeyRingCollection pubringcoll;
+  KeyRingCollectionTreeModel sectreemodel;
+  KeyRingCollectionTreeModel pubtreemodel;
   KeyFingerPrintCalculator fpcalc = new BcKeyFingerprintCalculator();
   BcPBESecretKeyDecryptorBuilder seckeydecbuilder = new BcPBESecretKeyDecryptorBuilder(  new BcPGPDigestCalculatorProvider() );
 
@@ -111,11 +113,16 @@ public class CryptographyManager
   }
   
    
-  public static Date getSecretKeyCreationDate( PGPSecretKey seckey )
+  public static Date getKeyCreationDate( PGPSecretKey seckey )
   {
     PGPPublicKey pubkey = seckey.getPublicKey();
+    return getKeyCreationDate( pubkey );
+  }
+  
+  public static Date getKeyCreationDate( PGPPublicKey pubkey )
+  {
     // Get self signatures - should only be one
-    Iterator<PGPSignature> it = pubkey.getSignaturesForKeyID( seckey.getKeyID() );
+    Iterator<PGPSignature> it = pubkey.getSignaturesForKeyID( pubkey.getKeyID() );
     PGPSignature sig;
     if ( it.hasNext() )
     {
@@ -279,6 +286,9 @@ public class CryptographyManager
       }
     }
       
+    sectreemodel = new KeyRingCollectionTreeModel( this, secringcoll, pubringcoll, true );
+    pubtreemodel = new KeyRingCollectionTreeModel( this, secringcoll, pubringcoll, false );
+    
     try
     {
       KeyStore windowsKeyStore = KeyStore.getInstance("Windows-MY");
@@ -291,6 +301,17 @@ public class CryptographyManager
     }
     
     loadSecretKeys();
+  }
+  
+  
+  public KeyRingCollectionTreeModel getSecretKeyTreeModel()
+  {
+    return sectreemodel;
+  }
+  
+  public KeyRingCollectionTreeModel getPublicKeyTreeModel()
+  {
+    return pubtreemodel;
   }
   
   /*
@@ -631,7 +652,74 @@ public class CryptographyManager
     return PGPPublicKey.addCertification(pubkey, signature);
   }
 
+  public SignatureVerificationResultSet verifyPublicKeySignature( PGPPublicKey subjectkey, PGPSignature sig )
+  {
+    SignatureVerificationResultSet set = null;
+    try
+    {
+      set = implVerifyPublicKeySignature( subjectkey, sig );
+    }
+    catch (PGPException ex)
+    {
+      set = new SignatureVerificationResultSet();
+      set.verified = false;
+      PGPSignatureSubpacketVector subs = sig.getHashedSubPackets();
+      SignatureVerificationResult result = new SignatureVerificationResult( subs.getSignerUserID(), sig.getKeyID() );
+      result.verified = false;
+      result.trustedkey = false;      
+      Logger.getLogger(CryptographyManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return set;
+  }
   
+  private SignatureVerificationResultSet implVerifyPublicKeySignature( PGPPublicKey subjectkey, PGPSignature sig ) throws PGPException
+  {
+    long signerid = sig.getKeyID();
+    PGPSignatureSubpacketVector subs = sig.getHashedSubPackets();
+    String signeruserid = subs.getSignerUserID();
+    SignatureVerificationResultSet set = null;
+
+    Iterator<PGPPublicKeyRing> it = pubringcoll.getKeyRings( signeruserid );
+    PGPPublicKeyRing keyring;
+    PGPPublicKey signerpubkey=null;
+    int candidatecount=0;
+    while ( it.hasNext() )
+    {
+      keyring = it.next();
+      signerpubkey = keyring.getPublicKey(signerid);
+      if ( signerpubkey == null )
+        continue;
+      // There could be multiple key rings matching the signer user id
+      // and any of those could have a key with the right ID
+      // Do we trust the current one?
+      candidatecount++;
+      set = implVerifyPublicKeySignature( subjectkey, signerpubkey, sig );
+      if ( set.verified )
+        return set;
+    }
+    
+    // no key was found with which to verify
+    if ( set == null )
+    {
+      set = new SignatureVerificationResultSet();
+      set.verified = false;
+      SignatureVerificationResult result = new SignatureVerificationResult( signeruserid, sig.getKeyID() );
+      result.verified = false;
+      result.trustedkey = false;
+    }
+    
+    return set;
+  }  
+  
+  public SignatureVerificationResultSet implVerifyPublicKeySignature( PGPPublicKey subjectkey, PGPPublicKey signerkey, PGPSignature sig ) throws PGPException
+  {
+    SignatureVerificationResultSet set = new SignatureVerificationResultSet();
+    set.verified = false;
+      sig.init( new BcPGPContentVerifierBuilderProvider(), signerkey );
+      if ( sig.verifyCertification( subjectkey ) )
+        set.verified = true;
+    return set;
+  }
   
   /**
    * Verify an SHA256withRSA signature
@@ -652,49 +740,48 @@ public class CryptographyManager
     
     Object o;
     PGPSignatureList siglist;
-    PGPSignatureSubpacketVector subs;
     o=pgpF.nextObject();
     if ( o==null || !(o instanceof PGPSignatureList) )
       return set;
     
     siglist = (PGPSignatureList)o;
+    return verify( plainText, siglist );
+  }
+  
+  public SignatureVerificationResultSet verify( byte[] plainText, PGPSignatureList siglist )
+          throws Exception
+  {
+    SignatureVerificationResultSet set = new SignatureVerificationResultSet();
+    PGPSignatureSubpacketVector subs;
     for ( PGPSignature sig : siglist )
     {
-      
       sig.getHashedSubPackets();
       subs = sig.getHashedSubPackets();
       System.out.println( "Signed by " + subs.getSignerUserID() );
       System.out.println( "Key ID " + Long.toHexString( sig.getKeyID() ) );
       SignatureVerificationResult result = new SignatureVerificationResult( subs.getSignerUserID(), sig.getKeyID() );
-      set.results.add( result );
+      set.add( result );
 
-      Iterator<PGPPublicKeyRing> it = pubringcoll.getKeyRings( subs.getSignerUserID() );
-      PGPPublicKeyRing keyring;
-      PGPPublicKey pubkey;
-      while ( it.hasNext() )
+      PGPPublicKey pubkey = pubringcoll.getPublicKey( sig.getKeyID() );
+      if ( pubkey != null )
       {
-        keyring = it.next();
-        pubkey = keyring.getPublicKey();
-        if ( pubkey != null )
+        System.out.println( "My key ring has a public key with the right name and with id = " + Long.toHexString( pubkey.getKeyID() ) );
+        if ( pubkey.getKeyID() == sig.getKeyID() )
         {
-          System.out.println( "My key ring has a public key with the right name and with id = " + Long.toHexString( pubkey.getKeyID() ) );
-          if ( pubkey.getKeyID() == sig.getKeyID() )
+          result.trustedkey = true;
+          sig.init( new BcPGPContentVerifierBuilderProvider(), pubkey );
+          sig.update(plainText);
+          if ( sig.verify() )
           {
-            result.trustedkey = true;
-            sig.init( new BcPGPContentVerifierBuilderProvider(), pubkey );
-            sig.update(plainText);
-            if ( sig.verify() )
-            {
-              System.out.println( "Signature Verified Authentic." );
-              result.verified = true;
-            }
-            else
-            {
-              System.out.println( "Signature Verification Failed." );
-            }
-            
-            break;
+            System.out.println( "Signature Verified Authentic." );
+            result.verified = true;
           }
+          else
+          {
+            System.out.println( "Signature Verification Failed." );
+          }
+
+          break;
         }
       }
     }

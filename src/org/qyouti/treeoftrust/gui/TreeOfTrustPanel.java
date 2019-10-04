@@ -68,30 +68,47 @@ public class TreeOfTrustPanel extends javax.swing.JPanel
   private void initComponents()
   {
 
-    jSplitPane1 = new javax.swing.JSplitPane();
-    jScrollPane1 = new javax.swing.JScrollPane();
+    splitpane = new javax.swing.JSplitPane();
+    leftpanel = new javax.swing.JPanel();
+    treescrollpane = new javax.swing.JScrollPane();
     tree = new javax.swing.JTree();
+    jPanel2 = new javax.swing.JPanel();
+    keylabel = new javax.swing.JLabel();
     treenodelscrollpanel = new javax.swing.JScrollPane();
 
     setLayout(new java.awt.BorderLayout());
 
-    jSplitPane1.setDividerLocation(250);
-    jSplitPane1.setDividerSize(16);
+    splitpane.setDividerLocation(250);
+    splitpane.setDividerSize(16);
 
-    jScrollPane1.setViewportView(tree);
+    leftpanel.setLayout(new java.awt.BorderLayout());
 
-    jSplitPane1.setLeftComponent(jScrollPane1);
-    jSplitPane1.setRightComponent(treenodelscrollpanel);
+    treescrollpane.setViewportView(tree);
 
-    add(jSplitPane1, java.awt.BorderLayout.CENTER);
+    leftpanel.add(treescrollpane, java.awt.BorderLayout.CENTER);
+
+    jPanel2.setLayout(new java.awt.BorderLayout());
+
+    keylabel.setText("Keys");
+    jPanel2.add(keylabel, java.awt.BorderLayout.CENTER);
+
+    leftpanel.add(jPanel2, java.awt.BorderLayout.NORTH);
+
+    splitpane.setLeftComponent(leftpanel);
+    splitpane.setRightComponent(treenodelscrollpanel);
+
+    add(splitpane, java.awt.BorderLayout.CENTER);
   }// </editor-fold>//GEN-END:initComponents
 
 
   // Variables declaration - do not modify//GEN-BEGIN:variables
-  private javax.swing.JScrollPane jScrollPane1;
-  private javax.swing.JSplitPane jSplitPane1;
+  private javax.swing.JPanel jPanel2;
+  private javax.swing.JLabel keylabel;
+  private javax.swing.JPanel leftpanel;
+  private javax.swing.JSplitPane splitpane;
   private javax.swing.JTree tree;
   private javax.swing.JScrollPane treenodelscrollpanel;
+  private javax.swing.JScrollPane treescrollpane;
   // End of variables declaration//GEN-END:variables
 
 }

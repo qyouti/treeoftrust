@@ -11,6 +11,7 @@ import javax.swing.JLabel;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeCellRenderer;
+import org.qyouti.treeoftrust.SecretKeyNode;
 import org.qyouti.treeoftrust.TreeOfTrustNode;
 
 /**
@@ -19,15 +20,16 @@ import org.qyouti.treeoftrust.TreeOfTrustNode;
  */
 public class TreeNodeRenderer extends DefaultTreeCellRenderer
 {
-  ImageIcon keyicon;
+  ImageIcon keyicon, keypairicon;
   
   public TreeNodeRenderer()
   {
     super();
     keyicon = new ImageIcon(TreeNodeRenderer.class.getResource("/org/qyouti/treeoftrust/gui/res/key.png"));    
-    this.setClosedIcon(keyicon);
-    this.setOpenIcon(keyicon);
-    this.setLeafIcon(keyicon);
+    keypairicon = new ImageIcon(TreeNodeRenderer.class.getResource("/org/qyouti/treeoftrust/gui/res/keypair.png"));    
+    setClosedIcon(keyicon);
+    setOpenIcon(keyicon);
+    setLeafIcon(keyicon);
   }
   
   
@@ -36,9 +38,13 @@ public class TreeNodeRenderer extends DefaultTreeCellRenderer
   @Override
   public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus)
   {
-    super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
-    //this.setText( value.toString() );
-    return this;
+    ImageIcon icon=keyicon;
+    if ( value instanceof SecretKeyNode )
+      icon = keypairicon;
+    setClosedIcon(icon);
+    setOpenIcon(icon);
+    setLeafIcon(icon);      
+    return super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
   }
   
 }

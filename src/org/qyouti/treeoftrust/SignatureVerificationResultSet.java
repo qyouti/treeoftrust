@@ -6,22 +6,47 @@
 package org.qyouti.treeoftrust;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import javax.swing.table.AbstractTableModel;
 
 /**
- *
+ * Note this:
+ * https://superuser.com/questions/706677/combining-gpg-key-signatures-into-one-key-file
+ * This class represents the results of checking multiple signatures using a single user
+ * configured collection of key rings. The key ring
  * @author maber01
  */
 public class SignatureVerificationResultSet
         extends AbstractTableModel
 {
   boolean verified;
-  ArrayList<SignatureVerificationResult> results = new ArrayList<>();
+  private ArrayList<SignatureVerificationResult> resultsinorder = new ArrayList<>();
+  private HashMap<Long,SignatureVerificationResult> results = new HashMap<>();
 
+  public void add( SignatureVerificationResult result )
+  {
+    resultsinorder.add(result);
+    results.put(result.keyid, result);
+  }
+  
+  public SignatureVerificationResult getSignatureVerificationResultAt( int n )
+  {
+    if ( n<0 || n>= resultsinorder.size() )
+      return null;
+    return resultsinorder.get(n);
+  }
+  
+  public SignatureVerificationResult get( long keyid )
+  {
+    return results.get(keyid);
+  }
+  
+  
   @Override
   public int getRowCount()
   {
-    return results.size();
+    return resultsinorder.size();
   }
 
   @Override
@@ -36,7 +61,7 @@ public class SignatureVerificationResultSet
     if ( rowIndex < 0 || rowIndex >=getRowCount() || columnIndex<0 || columnIndex>=getColumnCount() )
       return null;
     
-    SignatureVerificationResult result = results.get(rowIndex);
+    SignatureVerificationResult result = resultsinorder.get(rowIndex);
     switch ( columnIndex )
     {
       case 0:

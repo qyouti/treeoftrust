@@ -21,6 +21,26 @@ public class SignatureVerificationResult
     this.keyalias = keyalias;
     this.keyid = keyid;
   }
+
+  public boolean isVerified()
+  {
+    return verified;
+  }
+
+  public boolean isTrustedKey()
+  {
+    return trustedkey;
+  }
+
+  public String getKeyAlias()
+  {
+    return keyalias;
+  }
+
+  public long getKeyID()
+  {
+    return keyid;
+  }
   
   
   

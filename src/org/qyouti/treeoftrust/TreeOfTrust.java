@@ -19,8 +19,7 @@ public class TreeOfTrust extends DefaultTreeModel
   TreeOfTrustStore store;
   String name;
   
-  final ArrayList<TreeOfTrustListener> listeners = new ArrayList<>();
-  final ArrayList<TreeOfTrustNode> nodelist = new ArrayList<>();
+  final ArrayList<TreeOfTrustNode> nodelist        = new ArrayList<>();
 
   public TreeOfTrust( TreeOfTrustStore store, String name )
   {
@@ -78,6 +77,12 @@ public class TreeOfTrust extends DefaultTreeModel
   
   public String toString()
   {
+    return name;
+  }
+
+  
+  public String toDetailedString()
+  {
     StringBuilder sb = new StringBuilder();
     
     sb.append("Tree: \n");
@@ -91,19 +96,5 @@ public class TreeOfTrust extends DefaultTreeModel
     return sb.toString();
   }
   
-  public void addListener( TreeOfTrustListener l )
-  {
-    listeners.add(l);
-  }
   
-  public void removeListener( TreeOfTrustListener l )
-  {
-    listeners.remove(l);
-  }
-  
-  private void notifyListeners()
-  {
-    for ( TreeOfTrustListener l : listeners )
-      l.treeOfTrustChanged(this);
-  }
 }

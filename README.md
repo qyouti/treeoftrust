@@ -1,3 +1,5 @@
+Ideas from this project have been rolled into qyouti/quipto.
+
 # treeoftrust
 =============
 
